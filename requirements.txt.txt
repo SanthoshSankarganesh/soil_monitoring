@@ -1,0 +1,8 @@
+streamlit
+tensorflow
+pillow
+pdfkit
+matplotlib
+numpy
+folium
+streamlit-folium
