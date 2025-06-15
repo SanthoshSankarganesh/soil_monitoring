@@ -3,7 +3,6 @@ tensorflow
 numpy
 Pillow
 matplotlib
-pdfkit
 python-decouple
 folium
 streamlit-folium
