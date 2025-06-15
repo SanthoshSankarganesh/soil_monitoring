@@ -6,3 +6,4 @@ matplotlib
 python-decouple
 folium
 streamlit-folium
+pip
