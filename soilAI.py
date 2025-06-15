@@ -1,3 +1,5 @@
+if not os.path.exists("temp"):
+    os.makedirs("temp")
 import streamlit as st
 import tensorflow as tf
 import numpy as np
