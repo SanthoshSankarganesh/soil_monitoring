@@ -5,15 +5,10 @@ import streamlit as st
 import tensorflow as tf
 import numpy as np
 from PIL import Image
-import pdfkit
 from datetime import datetime
-import base64
 import folium
 from streamlit_folium import st_folium
 import matplotlib.pyplot as plt
-
-# Configure wkhtmltopdf path
-PDFKIT_CONFIG = pdfkit.configuration(wkhtmltopdf=r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe")
 
 # Set page config
 st.set_page_config(page_title="Soil Health Analyzer", layout="wide")
@@ -28,9 +23,6 @@ st.markdown("""
             html, body, [class*="css"] {
                 font-size: 14px;
             }
-        }
-        .pdf-button-hidden .stButton > button {
-            display: none;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -141,20 +133,24 @@ st.sidebar.title("🌱 Soil Analyzer Navigation")
 page = st.sidebar.radio("Select Section", [
     "Upload & Predict", "Recommended Crops", "Nutrient Deficiency",
     "Recommended Fertilizers", "Tips to Improve Soil",
-    "Soil Distribution Map", "Export PDF"])
+    "Soil Distribution Map"])
 
 # Upload & Predict Page
 if page == "Upload & Predict":
     st.title("📷 Upload Soil Image & Predict Type")
-    uploaded_file = st.file_uploader("Upload a soil image", type=["jpg", "jpeg", "png"])
-    if uploaded_file:
-        image_data = load_and_prep_image(uploaded_file)
+    uploaded_file = st.file_uploader("Upload a soil image", type=["jpg", "jpeg", "png", "webp"], accept_multiple_files=False, label_visibility="visible")
+    camera_input = st.camera_input("Or take a live photo")
+
+    active_input = camera_input if camera_input else uploaded_file
+
+    if active_input:
+        image_data = load_and_prep_image(active_input)
         prediction = model.predict(image_data)[0]
         predicted_index = np.argmax(prediction)
         predicted_soil = soil_labels[predicted_index]
         confidence = prediction[predicted_index]
 
-        st.session_state.image = uploaded_file
+        st.session_state.image = active_input
         st.session_state.prediction = predicted_soil
         st.session_state.confidence = confidence
 
@@ -172,7 +168,7 @@ if page == "Upload & Predict":
             folium.Marker(coords, tooltip=predicted_soil).add_to(m)
             st_folium(m, width=700, height=500)
     else:
-        st.warning("📌 Please upload a soil image to continue.")
+        st.warning("📌 Please upload or capture a soil image to continue.")
 
 # Subpage rendering
 if page in ["Recommended Crops", "Nutrient Deficiency", "Recommended Fertilizers", "Tips to Improve Soil"]:
@@ -185,34 +181,9 @@ if page in ["Recommended Crops", "Nutrient Deficiency", "Recommended Fertilizers
 
 # Soil Distribution Map
 if page == "Soil Distribution Map":
-    st.title("🗺 Soil Distribution Map")
+    st.title("🗽 Soil Distribution Map")
     map_center = [22.5, 80.0]
     m = folium.Map(location=map_center, zoom_start=5)
     for soil_type, data in soil_data.items():
         folium.Marker(data["Map"], tooltip=soil_type).add_to(m)
     st_folium(m, width=700, height=500)
-
-# Export PDF
-if page == "Export PDF":
-    st.title("🧾 Export PDF Report")
-    if st.session_state.image and st.session_state.prediction:
-        soil = st.session_state.prediction
-        content = f"""
-        <h2>Soil Health Report</h2>
-        <p><strong>Predicted Soil:</strong> {soil}</p>
-        <p><strong>Confidence:</strong> {st.session_state.confidence*100:.2f}%</p>
-        <p><strong>Recommended Crops:</strong> {soil_data[soil]['Recommended Crops']}</p>
-        <p><strong>Nutrient Deficiency:</strong> {soil_data[soil]['Nutrient Deficiency']}</p>
-        <p><strong>Recommended Fertilizers:</strong> {soil_data[soil]['Recommended Fertilizers']}</p>
-        <p><strong>Tips to Improve Soil:</strong> {soil_data[soil]['Tips to Improve Soil']}</p>
-        """
-        file_name = f"{soil}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-        file_path = os.path.join("temp", file_name)
-        os.makedirs("temp", exist_ok=True)
-        pdfkit.from_string(content, file_path, configuration=PDFKIT_CONFIG)
-        with open(file_path, "rb") as f:
-            base64_pdf = base64.b64encode(f.read()).decode("utf-8")
-            href = f'<a href="data:application/pdf;base64,{base64_pdf}" download="{file_name}">📥 Download PDF Report</a>'
-            st.markdown(href, unsafe_allow_html=True)
-    else:
-        st.warning("Please upload and predict a soil image first.")
