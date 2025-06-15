@@ -1,15 +1,13 @@
 import os
-if not os.path.exists("temp"):
-    os.makedirs("temp")
 import streamlit as st
 import tensorflow as tf
 import numpy as np
 from PIL import Image
 from datetime import datetime
+import base64
 import folium
 from streamlit_folium import st_folium
 import matplotlib.pyplot as plt
-
 # Set page config
 st.set_page_config(page_title="Soil Health Analyzer", layout="wide")
 
