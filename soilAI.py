@@ -1,207 +1,216 @@
-# soilAI.py
-
 import streamlit as st
 import tensorflow as tf
 import numpy as np
-import os
 from PIL import Image
+import os
 import pdfkit
 from datetime import datetime
-from streamlit_folium import st_folium
-import folium
 import base64
-import io
+import folium
+from streamlit_folium import st_folium
 import matplotlib.pyplot as plt
 
-# Configure PDFKit to use wkhtmltopdf path
-pdfkit_config = pdfkit.configuration(wkhtmltopdf=r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe")
+# Configure wkhtmltopdf path
+PDFKIT_CONFIG = pdfkit.configuration(wkhtmltopdf=r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe")
 
 # Set page config
-st.set_page_config(page_title="Soil Health Monitoring", layout="wide")
+st.set_page_config(page_title="Soil Health Analyzer", layout="wide")
 
-# Load the trained model
-MODEL_PATH = "keras_model.h5"  # Update with correct path to your model file
-model = tf.keras.models.load_model(MODEL_PATH)
+# Initialize session state
+if 'image' not in st.session_state:
+    st.session_state.image = None
+if 'prediction' not in st.session_state:
+    st.session_state.prediction = None
+if 'confidence' not in st.session_state:
+    st.session_state.confidence = None
 
-# Define all soil types
-soil_types = [
-    "Sand", "Silt", "Clay", "Loam", "Peat", "Chalk",
-    "Alluvial Soil", "Black Cotton Soil (Regur)", "Red and Yellow Soil", "Laterite Soil"
+# Soil types
+soil_labels = [
+    'Sand', 'Silt', 'Clay', 'Loam', 'Peat', 'Chalk',
+    'Alluvial Soil', 'Black Cotton Soil (Regur)', 'Red and Yellow Soil', 'Laterite Soil', 'Unknown'
 ]
 
-# Detailed soil_info with large paragraphs for each topic and soil type
-soil_info = {
-    "Sand": {
-        "Crops Cultivatable": "Sandy soil is ideal for root crops like carrots, radishes, and potatoes, which require well-draining, loose textures. It also supports crops such as peanuts, watermelon, and cucumbers due to its ability to warm up quickly and provide good aeration. However, it requires more frequent irrigation and nutrient management.",
-        "Nutrient Deficiency": "Sandy soil often lacks essential nutrients like nitrogen, potassium, and phosphorus due to its high drainage capacity. Organic matter content is typically very low, making it poor at retaining water and nutrients for long durations.",
-        "Recommended Fertilizers": "Apply compost and well-rotted manure regularly to build organic matter. Use slow-release nitrogen fertilizers or liquid feeds to address nutrient leaching. Mulching helps reduce evaporation.",
-        "Tips to Improve Soil": "Mix organic materials such as compost, peat moss, and vermiculite to improve moisture retention and nutrient-holding capacity. Use ground covers and mulch to reduce wind and water erosion. Implement crop rotation and cover cropping."
+# Load model
+model = tf.keras.models.load_model('keras_model.h5', compile=False)
+
+# Soil data
+data_template = {
+    'Nutrient Deficiency': "No data available.",
+    'Recommended Fertilizers': "No data available.",
+    'Recommended Crops': "No data available.",
+    'Tips to Improve Soil': "No data available.",
+    'Map': [20.0, 78.0]
+}
+
+soil_data = {
+    'Sand': {
+        'Nutrient Deficiency': "Sandy soils are often low in essential nutrients like nitrogen and phosphorus due to high leaching.",
+        'Recommended Fertilizers': "Use organic compost, green manure, and slow-release nitrogen fertilizers.",
+        'Recommended Crops': "Carrots, radishes, peanuts, and watermelon thrive in sandy soil.",
+        'Tips to Improve Soil': "Incorporate organic matter, add biochar, and mulch frequently to retain moisture.",
+        'Map': [23.5, 85.2]
     },
-    "Silt": {
-        "Crops Cultivatable": "Silt soils, being fertile and holding moisture well, support crops like rice, wheat, and vegetables. Their smooth texture aids root expansion, while high fertility ensures consistent yields. They are often found near rivers.",
-        "Nutrient Deficiency": "May suffer from compaction and poor drainage over time, leading to lower oxygen availability for roots. Nutrient levels can drop with overuse of chemical fertilizers without organic matter replacement.",
-        "Recommended Fertilizers": "Add well-rotted manure or green manure to enhance structure and fertility. Phosphorus and potassium supplements improve root growth and flowering in vegetable crops.",
-        "Tips to Improve Soil": "To avoid crusting, reduce heavy foot or machinery traffic. Add organic material and sand to improve aeration. Regular tilling and using raised beds help drainage."
+    'Silt': {
+        'Nutrient Deficiency': "Silts may suffer from poor phosphorus availability and compaction-related issues.",
+        'Recommended Fertilizers': "Balanced NPK fertilizers and organic compost are beneficial.",
+        'Recommended Crops': "Wheat, soybean, sugarcane, and vegetables.",
+        'Tips to Improve Soil': "Enhance structure by adding organic matter and avoid over-tilling.",
+        'Map': [26.0, 87.5]
     },
-    "Clay": {
-        "Crops Cultivatable": "Clay soils are nutrient-rich and retain moisture well, ideal for crops like broccoli, cabbage, and leafy greens. Their density also supports rice cultivation in paddy fields where water stagnation is beneficial.",
-        "Nutrient Deficiency": "Though rich in minerals, clay soil may lack organic matter and drain poorly. This can cause root diseases and stunted growth in some plants.",
-        "Recommended Fertilizers": "Apply compost and aged manure to improve structure and organic matter. Use gypsum to reduce compaction. Slow-release fertilizers prevent nutrient lockup.",
-        "Tips to Improve Soil": "Work soil in dry conditions. Add organic matter consistently. Double digging and raised beds help aeration. Avoid walking on wet clay to prevent compaction."
+    'Clay': {
+        'Nutrient Deficiency': "Clay soil may suffer from poor aeration and potassium deficiency.",
+        'Recommended Fertilizers': "Use potassium-rich fertilizers and gypsum to improve soil structure.",
+        'Recommended Crops': "Rice, broccoli, and lettuce are suitable for clay soil.",
+        'Tips to Improve Soil': "Add compost and gypsum to reduce compaction and improve drainage.",
+        'Map': [25.0, 81.0]
     },
-    "Loam": {
-        "Crops Cultivatable": "Loamy soil is considered the best agricultural soil due to its balanced sand, silt, and clay composition. It supports nearly all crops such as maize, cotton, sugarcane, pulses, and vegetables.",
-        "Nutrient Deficiency": "Rarely deficient, but overuse can deplete nitrogen and phosphorus. Careful rotation prevents micronutrient loss."
-        ,"Recommended Fertilizers": "Compost and balanced NPK fertilizers maintain long-term fertility. Mulching prevents leaching.",
-        "Tips to Improve Soil": "Avoid over-tilling to maintain structure. Rotate crops and include legumes. Maintain pH with lime or sulfur if necessary."
+    'Loam': {
+        'Nutrient Deficiency': "Generally fertile, but may sometimes lack nitrogen if overused.",
+        'Recommended Fertilizers': "Use balanced organic or synthetic fertilizers.",
+        'Recommended Crops': "Almost all crops including maize, wheat, pulses, and vegetables.",
+        'Tips to Improve Soil': "Rotate crops, maintain pH, and use cover crops.",
+        'Map': [22.0, 78.0]
     },
-    "Peat": {
-        "Crops Cultivatable": "Peat soil, being high in organic matter and moisture, is excellent for root vegetables like carrots and turnips. It also supports legumes and brassicas when properly drained.",
-        "Nutrient Deficiency": "Often acidic and low in minerals like iron, manganese, and molybdenum. Requires liming and trace element supplementation.",
-        "Recommended Fertilizers": "Use lime to reduce acidity, and apply micronutrient-rich fertilizers. Add sand to improve drainage.",
-        "Tips to Improve Soil": "Drain excess water through channels. Mix in sand or loam for structure. Regularly test pH and adjust."
+    'Peat': {
+        'Nutrient Deficiency': "Deficient in micronutrients like copper, iron, and zinc.",
+        'Recommended Fertilizers': "Micronutrient sprays and well-rotted compost are ideal.",
+        'Recommended Crops': "Root crops, salad greens, and brassicas.",
+        'Tips to Improve Soil': "Mix with mineral soil, lime to reduce acidity, and improve drainage.",
+        'Map': [26.7, 88.4]
     },
-    "Chalk": {
-        "Crops Cultivatable": "Chalky soils suit crops like barley, beans, spinach, and cabbage. They thrive in alkaline conditions and require adequate watering.",
-        "Nutrient Deficiency": "Commonly lacks iron, manganese, and potassium. High pH can lead to nutrient lockout.",
-        "Recommended Fertilizers": "Use acidifying fertilizers (ammonium sulfate), seaweed, and chelated iron sprays.",
-        "Tips to Improve Soil": "Add compost and acidic organic matter. Avoid over-liming. Grow green manures to retain moisture."
+    'Chalk': {
+        'Nutrient Deficiency': "Often lacks iron and manganese due to high alkalinity.",
+        'Recommended Fertilizers': "Use chelated iron, organic matter, and acidic fertilizers.",
+        'Recommended Crops': "Barley, clover, spinach, and beet.",
+        'Tips to Improve Soil': "Add organic matter and acidic mulches to balance pH.",
+        'Map': [30.3, 76.4]
     },
-    "Alluvial Soil": {
-        "Crops Cultivatable": "Highly fertile and found in river plains, supports paddy, wheat, sugarcane, maize, and pulses. Ideal for intensive cropping.",
-        "Nutrient Deficiency": "May be deficient in nitrogen and phosphorus due to leaching in flood-prone zones.",
-        "Recommended Fertilizers": "Apply nitrogen and phosphorus-based fertilizers like urea and DAP. Use vermicompost for sustainability.",
-        "Tips to Improve Soil": "Use green manures post-harvest. Employ bunding and contour farming to reduce erosion."
+    'Alluvial Soil': {
+        'Nutrient Deficiency': "Sometimes low in nitrogen and organic carbon.",
+        'Recommended Fertilizers': "Green manure, compost, and urea-based nitrogen fertilizers.",
+        'Recommended Crops': "Rice, wheat, sugarcane, and pulses.",
+        'Tips to Improve Soil': "Regular use of organic amendments and crop rotation.",
+        'Map': [25.6, 84.9]
     },
-    "Black Cotton Soil (Regur)": {
-        "Crops Cultivatable": "Excellent for cotton, soybean, sorghum, and sunflower. High moisture retention aids growth in dry regions.",
-        "Nutrient Deficiency": "Deficient in nitrogen, phosphorus, and organic carbon. High in calcium and magnesium.",
-        "Recommended Fertilizers": "Add nitrogenous and phosphatic fertilizers. Apply FYM and compost.",
-        "Tips to Improve Soil": "Deep ploughing post-monsoon helps cracking soil structure. Use contour bunding."
+    'Black Cotton Soil (Regur)': {
+        'Nutrient Deficiency': "Often deficient in nitrogen, phosphorus, and organic carbon.",
+        'Recommended Fertilizers': "Use NPK mixtures and farmyard manure.",
+        'Recommended Crops': "Cotton, soybeans, sorghum, and pulses.",
+        'Tips to Improve Soil': "Apply organic compost and manage irrigation carefully.",
+        'Map': [19.1, 77.4]
     },
-    "Red and Yellow Soil": {
-        "Crops Cultivatable": "Suitable for millets, pulses, groundnut, and oilseeds. Common in eastern and central India.",
-        "Nutrient Deficiency": "Low in nitrogen, phosphorus, and humus. Prone to erosion.",
-        "Recommended Fertilizers": "Incorporate farmyard manure and green manure. Apply balanced NPK blends.",
-        "Tips to Improve Soil": "Terracing and afforestation help prevent erosion. Use mulching for moisture."
+    'Red and Yellow Soil': {
+        'Nutrient Deficiency': "Typically low in nitrogen, phosphorus, and humus.",
+        'Recommended Fertilizers': "Phosphatic and nitrogen-rich fertilizers with compost.",
+        'Recommended Crops': "Millets, pulses, groundnut, and oilseeds.",
+        'Tips to Improve Soil': "Use organic compost, green manure, and mulching.",
+        'Map': [20.8, 83.2]
     },
-    "Laterite Soil": {
-        "Crops Cultivatable": "Grows tea, coffee, cashew, rubber, and coconut in high rainfall areas.",
-        "Nutrient Deficiency": "Low fertility due to leaching. Deficient in lime, potash, and phosphoric acid.",
-        "Recommended Fertilizers": "Apply lime and organic compost. Supplement with potassium-rich fertilizers.",
-        "Tips to Improve Soil": "Use raised beds to counter waterlogging. Replenish nutrients annually."
+    'Laterite Soil': {
+        'Nutrient Deficiency': "Deficient in nitrogen, phosphorus, and potassium.",
+        'Recommended Fertilizers': "Heavy use of compost, cow dung manure, and lime.",
+        'Recommended Crops': "Tea, coffee, cashew, and tapioca.",
+        'Tips to Improve Soil': "Add lime to reduce acidity and regular organic manure.",
+        'Map': [15.3, 75.1]
     }
 }
 
-# Function to predict soil type
-def predict_soil_type(img_array):
-    prediction = model.predict(img_array)[0]
-    predicted_index = np.argmax(prediction)
-    soil_type = soil_types[predicted_index]
-    confidence = prediction[predicted_index]
-    return soil_type, confidence, prediction
+# Sidebar navigation
+st.sidebar.title("🌱 Soil Analyzer Navigation")
+page = st.sidebar.radio("Select Section", [
+    "Upload & Predict", "Recommended Crops", "Nutrient Deficiency",
+    "Recommended Fertilizers", "Tips to Improve Soil",
+    "Soil Distribution Map", "Export PDF"])
 
-# Generate a chart comparing soil nutrient probability and highlight predicted soil
-def generate_comparison_chart(prediction_probs, detected_soil):
-    fig, ax = plt.subplots()
-    bars = ax.bar(soil_types, prediction_probs, color='gray')
-    for i, soil in enumerate(soil_types):
-        if soil == detected_soil:
-            bars[i].set_color('green')
-    ax.set_ylabel('Probability')
-    ax.set_title('Soil Type Prediction Probabilities')
-    plt.xticks(rotation=45)
-    st.pyplot(fig)
-
-# Mapping from soil type to major regions in India
-soil_distribution = {
-    "Sand": [("Rajasthan", 27.0238, 74.2179), ("Punjab", 31.1471, 75.3412)],
-    "Silt": [("Uttar Pradesh", 26.8467, 80.9462)],
-    "Clay": [("Tamil Nadu", 11.1271, 78.6569)],
-    "Loam": [("Haryana", 29.0588, 76.0856)],
-    "Peat": [("Kerala", 10.8505, 76.2711)],
-    "Chalk": [("Himachal Pradesh", 31.1048, 77.1734)],
-    "Alluvial Soil": [("Bihar", 25.0961, 85.3131), ("West Bengal", 22.9868, 87.8550)],
-    "Black Cotton Soil (Regur)": [("Maharashtra", 19.7515, 75.7139), ("Madhya Pradesh", 22.9734, 78.6569)],
-    "Red and Yellow Soil": [("Odisha", 20.9517, 85.0985), ("Chhattisgarh", 21.2787, 81.8661)],
-    "Laterite Soil": [("Goa", 15.2993, 74.1240), ("Karnataka", 15.3173, 75.7139), ("Kerala", 10.8505, 76.2711)]
-}
-
-# Function to show map with soil distribution
-def show_soil_map(soil_type):
-    if soil_type not in soil_distribution:
-        return
-    st.markdown("### \U0001F4CD Major Regions with this Soil Type in India")
-    india_map = folium.Map(location=[22.9734, 78.6569], zoom_start=5)
-    for region, lat, lon in soil_distribution[soil_type]:
-        folium.Marker([lat, lon], tooltip=f"{region} ({soil_type})", icon=folium.Icon(color='green')).add_to(india_map)
-    st_folium(india_map, width=700)
-
-# Sidebar Navigation
-pages = ["Upload & Predict", "Crops Cultivatable", "Nutrient Deficiency", "Recommended Fertilizers", "Tips to Improve Soil"]
-page = st.sidebar.radio("Navigation", pages)
-
-# Session state initialization
-if "uploaded_image" not in st.session_state:
-    st.session_state.uploaded_image = None
-if "prediction" not in st.session_state:
-    st.session_state.prediction = None
-if "probabilities" not in st.session_state:
-    st.session_state.probabilities = None
-
-# Upload & Predict Page
+# Prediction and visualization logic
 if page == "Upload & Predict":
-    st.title("\U0001F33E Soil Health Monitoring System")
-    img_source = st.radio("Select image input method:", ["Upload Image", "Take Photo"])
+    st.title("📷 Upload Soil Image")
+    uploaded_file = st.file_uploader("Upload a soil image", type=["jpg", "jpeg", "png"])
+    camera_input = st.camera_input("Or capture using camera")
 
-    if img_source == "Upload Image":
-        image = st.file_uploader("Upload Soil Image", type=["jpg", "jpeg", "png"])
-    else:
-        image = st.camera_input("Take a photo")
+    if uploaded_file:
+        image = Image.open(uploaded_file).resize((224, 224))
+        st.session_state.image = image
+    elif camera_input:
+        image = Image.open(camera_input).resize((224, 224))
+        st.session_state.image = image
 
-    if image:
-        st.image(image, caption="Uploaded Image", use_column_width=True)
-        st.session_state.uploaded_image = image
-
-        img = Image.open(image).resize((224, 224))
-        img_array = np.array(img) / 255.0
+    if st.session_state.image:
+        st.image(st.session_state.image, caption="Uploaded Image", use_column_width=True)
+        img_array = np.array(st.session_state.image) / 255.0
         img_array = np.expand_dims(img_array, axis=0)
 
-        soil_type, confidence, probabilities = predict_soil_type(img_array)
-        st.session_state.prediction = (soil_type, confidence)
-        st.session_state.probabilities = probabilities
+        prediction = model.predict(img_array)[0]
+        pred_index = int(np.argmax(prediction))
+        confidence = float(prediction[pred_index])
+        predicted_soil = soil_labels[pred_index]
 
-        st.success(f"\U0001F9EA Detected Soil Type: {soil_type} ({confidence*100:.2f}% confidence)")
+        if confidence < 0.60 or predicted_soil == "Unknown":
+            st.session_state.prediction = None
+            st.session_state.confidence = None
+            st.error("❌ Not a valid soil image. Upload a clear close-up photo of real soil.")
+        else:
+            st.session_state.prediction = predicted_soil
+            st.session_state.confidence = confidence
+            st.success(f"✅ Detected: {predicted_soil} (Confidence: {confidence:.2f})")
 
-        show_soil_map(soil_type)
-        generate_comparison_chart(probabilities, soil_type)
+            # Chart
+            fig, ax = plt.subplots()
+            ax.bar(soil_labels[:len(prediction)], prediction)
+            ax.set_ylabel("Confidence")
+            ax.set_title("Soil Prediction Probabilities")
+            plt.xticks(rotation=45)
+            st.pyplot(fig)
 
-        if st.button("Download Report as PDF"):
+# Subpages with detailed info
+elif st.session_state.prediction:
+    soil = st.session_state.prediction
+    info = soil_data.get(soil, data_template)
+
+    if page == "Recommended Crops":
+        st.title(f"🌾 Recommended Crops for {soil}")
+        st.markdown(f"<div style='font-size:18px;'>{info['Recommended Crops']}</div>", unsafe_allow_html=True)
+
+    elif page == "Nutrient Deficiency":
+        st.title(f"🥀 Nutrient Deficiency in {soil}")
+        st.markdown(f"<div style='font-size:18px;'>{info['Nutrient Deficiency']}</div>", unsafe_allow_html=True)
+
+    elif page == "Recommended Fertilizers":
+        st.title(f"🌿 Fertilizers Recommended for {soil}")
+        st.markdown(f"<div style='font-size:18px;'>{info['Recommended Fertilizers']}</div>", unsafe_allow_html=True)
+
+    elif page == "Tips to Improve Soil":
+        st.title(f"🛠️ Tips to Improve {soil}")
+        st.markdown(f"<div style='font-size:18px;'>{info['Tips to Improve Soil']}</div>", unsafe_allow_html=True)
+
+    elif page == "Soil Distribution Map":
+        st.title("🗺️ Soil Type Distribution in India")
+        lat, lon = info['Map']
+        fmap = folium.Map(location=[lat, lon], zoom_start=6)
+        folium.Marker([lat, lon], popup=soil).add_to(fmap)
+        st_data = st_folium(fmap, width=700)
+
+    elif page == "Export PDF":
+        st.title("📄 Export Soil Health Report")
+        if st.button("Generate PDF Report"):
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"{soil_type.replace(' ', '_')}_{timestamp}.pdf"
+            file_name = f"{soil.replace(' ', '_')}_{timestamp}.pdf"
+
             pdf_content = f"""
-                <html>
-                <head><meta charset='UTF-8'><style>h1{{text-align:center;}} h2{{color:#2E86C1}} p{{font-size:18px;}}</style></head>
-                <body>
-                <h1>{soil_type} Soil Report</h1>
-                <p><strong>Confidence:</strong> {confidence*100:.2f}%</p>
+            <h1>Soil Health Report</h1>
+            <h2>Soil Type: {soil}</h2>
+            <h3>Confidence: {st.session_state.confidence:.2f}</h3>
+            <p><b>Nutrient Deficiency:</b> {info['Nutrient Deficiency']}</p>
+            <p><b>Recommended Fertilizers:</b> {info['Recommended Fertilizers']}</p>
+            <p><b>Recommended Crops:</b> {info['Recommended Crops']}</p>
+            <p><b>Tips to Improve Soil:</b> {info['Tips to Improve Soil']}</p>
             """
-            for key, val in soil_info[soil_type].items():
-                pdf_content += f"<h2>{key}</h2><p>{val}</p>"
-            pdf_content += "</body></html>"
-
-            tmp_path = os.path.join("./", filename)
-            pdfkit.from_string(pdf_content, tmp_path, configuration=pdfkit_config)
-
-            with open(tmp_path, "rb") as f:
-                st.download_button("\U0001F4C4 Download PDF", f, file_name=filename)
-
-# Subtopic Pages
+            pdfkit.from_string(pdf_content, file_name, configuration=PDFKIT_CONFIG)
+            with open(file_name, "rb") as f:
+                b64 = base64.b64encode(f.read()).decode()
+                href = f'<a href="data:application/octet-stream;base64,{b64}" download="{file_name}">📥 Download PDF Report</a>'
+                st.markdown(href, unsafe_allow_html=True)
+            os.remove(file_name)
 else:
-    st.title(f"\U0001F4DA {page}")
-    if st.session_state.prediction:
-        soil_type = st.session_state.prediction[0]
-        st.markdown(f"### For <u>{soil_type}</u> soil:", unsafe_allow_html=True)
-        st.markdown(f"<p style='font-size:20px;'>{soil_info.get(soil_type, {}).get(page, 'No information available.')}</p>", unsafe_allow_html=True)
-    else:
-        st.warning("Please upload and predict a soil image first from the Upload & Predict tab.")
+    st.warning("Upload and predict a valid soil image first to view details.")
+
