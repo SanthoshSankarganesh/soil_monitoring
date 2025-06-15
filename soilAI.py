@@ -34,84 +34,87 @@ soil_labels = [
 model = tf.keras.models.load_model('keras_model.h5', compile=False)
 
 # Soil data
+def long_paragraph(text):
+    return f"<div style='font-size:18px;'>{text}</div>"
+
 data_template = {
-    'Nutrient Deficiency': "No data available.",
-    'Recommended Fertilizers': "No data available.",
-    'Recommended Crops': "No data available.",
-    'Tips to Improve Soil': "No data available.",
+    'Nutrient Deficiency': "Detailed data not available yet.",
+    'Recommended Fertilizers': "Detailed data not available yet.",
+    'Recommended Crops': "Detailed data not available yet.",
+    'Tips to Improve Soil': "Detailed data not available yet.",
     'Map': [20.0, 78.0]
 }
 
 soil_data = {
     'Sand': {
-        'Nutrient Deficiency': "Sandy soils are often low in essential nutrients like nitrogen and phosphorus due to high leaching.",
-        'Recommended Fertilizers': "Use organic compost, green manure, and slow-release nitrogen fertilizers.",
-        'Recommended Crops': "Carrots, radishes, peanuts, and watermelon thrive in sandy soil.",
-        'Tips to Improve Soil': "Incorporate organic matter, add biochar, and mulch frequently to retain moisture.",
+        'Nutrient Deficiency': "Sandy soils often lack essential nutrients due to their loose structure, resulting in poor retention of nitrogen, potassium, and phosphorus.",
+        'Recommended Fertilizers': "Use slow-release nitrogen fertilizers, organic compost, and biofertilizers to gradually enrich the soil.",
+        'Recommended Crops': "Root vegetables like carrots and potatoes, as well as crops like watermelon and peanuts, grow well in sandy soil.",
+        'Tips to Improve Soil': "Add compost, mulch heavily, and grow cover crops to build organic matter and improve water retention.",
         'Map': [23.5, 85.2]
     },
     'Silt': {
-        'Nutrient Deficiency': "Silts may suffer from poor phosphorus availability and compaction-related issues.",
-        'Recommended Fertilizers': "Balanced NPK fertilizers and organic compost are beneficial.",
-        'Recommended Crops': "Wheat, soybean, sugarcane, and vegetables.",
-        'Tips to Improve Soil': "Enhance structure by adding organic matter and avoid over-tilling.",
-        'Map': [26.0, 87.5]
+        'Nutrient Deficiency': "Silts may experience nitrogen depletion and phosphorus lock-up due to their moderate drainage and mineral content.",
+        'Recommended Fertilizers': "Apply balanced NPK fertilizers, compost, and micronutrient supplements.",
+        'Recommended Crops': "Crops like rice, wheat, and vegetables such as lettuce and broccoli thrive in silt soil.",
+        'Tips to Improve Soil': "Incorporate green manure, maintain good drainage, and avoid over-tilling to retain fertility.",
+        'Map': [25.5, 83.5]
     },
     'Clay': {
-        'Nutrient Deficiency': "Clay soil may suffer from poor aeration and potassium deficiency.",
-        'Recommended Fertilizers': "Use potassium-rich fertilizers and gypsum to improve soil structure.",
-        'Recommended Crops': "Rice, broccoli, and lettuce are suitable for clay soil.",
-        'Tips to Improve Soil': "Add compost and gypsum to reduce compaction and improve drainage.",
-        'Map': [25.0, 81.0]
+        'Nutrient Deficiency': "Clay soils tend to become compacted, limiting nutrient availability, especially nitrogen and calcium.",
+        'Recommended Fertilizers': "Use gypsum, calcium ammonium nitrate, and composted manure to loosen structure and add nutrients.",
+        'Recommended Crops': "Soybeans, broccoli, and cabbage grow well in clay with proper aeration.",
+        'Tips to Improve Soil': "Add organic matter, avoid working when wet, and install drainage systems to improve texture.",
+        'Map': [22.3, 78.4]
     },
     'Loam': {
-        'Nutrient Deficiency': "Generally fertile, but may sometimes lack nitrogen if overused.",
-        'Recommended Fertilizers': "Use balanced organic or synthetic fertilizers.",
-        'Recommended Crops': "Almost all crops including maize, wheat, pulses, and vegetables.",
-        'Tips to Improve Soil': "Rotate crops, maintain pH, and use cover crops.",
-        'Map': [22.0, 78.0]
+        'Nutrient Deficiency': "Loamy soils are typically well-balanced but may suffer from micronutrient depletion in intensive farming.",
+        'Recommended Fertilizers': "Use compost tea, rock phosphate, and organic fertilizers for sustainable enrichment.",
+        'Recommended Crops': "Most crops including maize, wheat, pulses, and vegetables grow excellently in loam.",
+        'Tips to Improve Soil': "Rotate crops, mulch regularly, and use compost to sustain fertility.",
+        'Map': [26.1, 81.2]
     },
     'Peat': {
-        'Nutrient Deficiency': "Deficient in micronutrients like copper, iron, and zinc.",
-        'Recommended Fertilizers': "Micronutrient sprays and well-rotted compost are ideal.",
-        'Recommended Crops': "Root crops, salad greens, and brassicas.",
-        'Tips to Improve Soil': "Mix with mineral soil, lime to reduce acidity, and improve drainage.",
-        'Map': [26.7, 88.4]
+        'Nutrient Deficiency': "Peaty soils are acidic and often deficient in minerals like iron, copper, and manganese.",
+        'Recommended Fertilizers': "Apply lime to reduce acidity and use chelated micronutrient formulations.",
+        'Recommended Crops': "Cranberries, blueberries, and root crops like carrots can tolerate peat soil.",
+        'Tips to Improve Soil': "Drain excess water, lime periodically, and add mineral-rich compost.",
+        'Map': [28.6, 76.1]
     },
     'Chalk': {
-        'Nutrient Deficiency': "Often lacks iron and manganese due to high alkalinity.",
-        'Recommended Fertilizers': "Use chelated iron, organic matter, and acidic fertilizers.",
-        'Recommended Crops': "Barley, clover, spinach, and beet.",
-        'Tips to Improve Soil': "Add organic matter and acidic mulches to balance pH.",
-        'Map': [30.3, 76.4]
+        'Nutrient Deficiency': "Chalky soils often suffer from iron and zinc deficiencies due to high pH.",
+        'Recommended Fertilizers': "Use acidic fertilizers, iron sulphate, and organic compost.",
+        'Recommended Crops': "Barley, beet, and cabbage do relatively well in chalk with pH management.",
+        'Tips to Improve Soil': "Add organic matter to retain moisture and adjust pH using sulfur-based treatments.",
+        'Map': [29.3, 75.8]
     },
     'Alluvial Soil': {
-        'Nutrient Deficiency': "Sometimes low in nitrogen and organic carbon.",
-        'Recommended Fertilizers': "Green manure, compost, and urea-based nitrogen fertilizers.",
-        'Recommended Crops': "Rice, wheat, sugarcane, and pulses.",
-        'Tips to Improve Soil': "Regular use of organic amendments and crop rotation.",
-        'Map': [25.6, 84.9]
+        'Nutrient Deficiency': "Alluvial soils may lack nitrogen in intensely farmed areas but are otherwise rich.",
+        'Recommended Fertilizers': "Use green manure and supplement with nitrogen-rich fertilizers.",
+        'Recommended Crops': "Rice, wheat, sugarcane, and jute grow abundantly in alluvial soil.",
+        'Tips to Improve Soil': "Adopt crop rotation, conserve moisture, and apply balanced fertilizers.",
+        'Map': [27.2, 83.1]
     },
     'Black Cotton Soil (Regur)': {
-        'Nutrient Deficiency': "Often deficient in nitrogen, phosphorus, and organic carbon.",
-        'Recommended Fertilizers': "Use NPK mixtures and farmyard manure.",
-        'Recommended Crops': "Cotton, soybeans, sorghum, and pulses.",
-        'Tips to Improve Soil': "Apply organic compost and manage irrigation carefully.",
-        'Map': [19.1, 77.4]
+        'Nutrient Deficiency': "Typically deficient in nitrogen, phosphorus, and organic matter.",
+        'Recommended Fertilizers': "Apply NPK blends with organic manure, and zinc sulphate for micronutrients.",
+        'Recommended Crops': "Cotton, sorghum, sunflower, and groundnut are best suited.",
+        'Tips to Improve Soil': "Enhance organic matter, practice deep tillage, and prevent water stagnation.",
+        'Map': [19.9, 77.4]
     },
     'Red and Yellow Soil': {
-        'Nutrient Deficiency': "Typically low in nitrogen, phosphorus, and humus.",
-        'Recommended Fertilizers': "Phosphatic and nitrogen-rich fertilizers with compost.",
-        'Recommended Crops': "Millets, pulses, groundnut, and oilseeds.",
-        'Tips to Improve Soil': "Use organic compost, green manure, and mulching.",
-        'Map': [20.8, 83.2]
+        'Nutrient Deficiency': "Generally low in nitrogen, phosphorus, and humus.",
+        'Recommended Fertilizers': "Use phosphatic fertilizers and farmyard manure regularly.",
+        'Recommended Crops': "Millets, pulses, and oilseeds grow best.",
+        'Tips to Improve Soil': "Apply organic compost, avoid erosion, and grow cover crops.",
+        'Map': [20.3, 84.1]
     },
     'Laterite Soil': {
-        'Nutrient Deficiency': "Deficient in nitrogen, phosphorus, and potassium.",
-        'Recommended Fertilizers': "Heavy use of compost, cow dung manure, and lime.",
-        'Recommended Crops': "Tea, coffee, cashew, and tapioca.",
-        'Tips to Improve Soil': "Add lime to reduce acidity and regular organic manure.",
-        'Map': [15.3, 75.1]
+        'Nutrient Deficiency': "Highly leached soil, often deficient in nitrogen, potassium, and calcium.",
+        'Recommended Fertilizers': "Add dolomite, lime, and balanced fertilizers.",
+        'Recommended Crops': "Cashew, tea, and tapioca perform well.",
+        'Tips to Improve Soil': "Add compost, practice mulching, and control erosion.",
+        'Map': [15.5, 75.6]
     }
 }
 
@@ -122,7 +125,7 @@ page = st.sidebar.radio("Select Section", [
     "Recommended Fertilizers", "Tips to Improve Soil",
     "Soil Distribution Map", "Export PDF"])
 
-# Prediction and visualization logic
+# Upload & Predict Page
 if page == "Upload & Predict":
     st.title("📷 Upload Soil Image")
     uploaded_file = st.file_uploader("Upload a soil image", type=["jpg", "jpeg", "png"])
@@ -156,42 +159,49 @@ if page == "Upload & Predict":
 
             # Chart
             fig, ax = plt.subplots()
-            ax.bar(soil_labels[:len(prediction)], prediction)
+            ax.bar(range(len(prediction[:-1])), prediction[:-1])
+            ax.set_xticks(range(len(soil_labels[:-1])))
+            ax.set_xticklabels(soil_labels[:-1], rotation=45)
             ax.set_ylabel("Confidence")
             ax.set_title("Soil Prediction Probabilities")
-            plt.xticks(rotation=45)
             st.pyplot(fig)
 
-# Subpages with detailed info
-elif st.session_state.prediction:
+# Detail Pages
+elif page == "Recommended Crops" and st.session_state.prediction:
     soil = st.session_state.prediction
-    info = soil_data.get(soil, data_template)
+    st.title(f"🌾 Recommended Crops for {soil}")
+    st.markdown(long_paragraph(soil_data[soil]['Recommended Crops']), unsafe_allow_html=True)
 
-    if page == "Recommended Crops":
-        st.title(f"🌾 Recommended Crops for {soil}")
-        st.markdown(f"<div style='font-size:18px;'>{info['Recommended Crops']}</div>", unsafe_allow_html=True)
+elif page == "Nutrient Deficiency" and st.session_state.prediction:
+    soil = st.session_state.prediction
+    st.title(f"🥀 Nutrient Deficiency in {soil}")
+    st.markdown(long_paragraph(soil_data[soil]['Nutrient Deficiency']), unsafe_allow_html=True)
 
-    elif page == "Nutrient Deficiency":
-        st.title(f"🥀 Nutrient Deficiency in {soil}")
-        st.markdown(f"<div style='font-size:18px;'>{info['Nutrient Deficiency']}</div>", unsafe_allow_html=True)
+elif page == "Recommended Fertilizers" and st.session_state.prediction:
+    soil = st.session_state.prediction
+    st.title(f"🌿 Fertilizers Recommended for {soil}")
+    st.markdown(long_paragraph(soil_data[soil]['Recommended Fertilizers']), unsafe_allow_html=True)
 
-    elif page == "Recommended Fertilizers":
-        st.title(f"🌿 Fertilizers Recommended for {soil}")
-        st.markdown(f"<div style='font-size:18px;'>{info['Recommended Fertilizers']}</div>", unsafe_allow_html=True)
+elif page == "Tips to Improve Soil" and st.session_state.prediction:
+    soil = st.session_state.prediction
+    st.title(f"🛠️ Tips to Improve {soil}")
+    st.markdown(long_paragraph(soil_data[soil]['Tips to Improve Soil']), unsafe_allow_html=True)
 
-    elif page == "Tips to Improve Soil":
-        st.title(f"🛠️ Tips to Improve {soil}")
-        st.markdown(f"<div style='font-size:18px;'>{info['Tips to Improve Soil']}</div>", unsafe_allow_html=True)
+elif page == "Soil Distribution Map" and st.session_state.prediction:
+    soil = st.session_state.prediction
+    lat, lon = soil_data[soil]['Map']
+    st.title("🗺️ Soil Type Distribution in India")
+    fmap = folium.Map(location=[lat, lon], zoom_start=6)
+    folium.Marker([lat, lon], popup=soil).add_to(fmap)
+    st_data = st_folium(fmap, width=700)
 
-    elif page == "Soil Distribution Map":
-        st.title("🗺️ Soil Type Distribution in India")
-        lat, lon = info['Map']
-        fmap = folium.Map(location=[lat, lon], zoom_start=6)
-        folium.Marker([lat, lon], popup=soil).add_to(fmap)
-        st_data = st_folium(fmap, width=700)
+# Export PDF Page
+elif page == "Export PDF":
+    st.title("📄 Export Soil Health Report")
+    if st.session_state.prediction:
+        soil = st.session_state.prediction
+        info = soil_data.get(soil, data_template)
 
-    elif page == "Export PDF":
-        st.title("📄 Export Soil Health Report")
         if st.button("Generate PDF Report"):
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             file_name = f"{soil.replace(' ', '_')}_{timestamp}.pdf"
@@ -211,6 +221,9 @@ elif st.session_state.prediction:
                 href = f'<a href="data:application/octet-stream;base64,{b64}" download="{file_name}">📥 Download PDF Report</a>'
                 st.markdown(href, unsafe_allow_html=True)
             os.remove(file_name)
+    else:
+        st.warning("Upload and predict a soil image before generating the PDF.")
+
+# Fallback message
 else:
     st.warning("Upload and predict a valid soil image first to view details.")
-
