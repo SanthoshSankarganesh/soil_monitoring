@@ -2,8 +2,7 @@ streamlit
 tensorflow
 numpy
 Pillow
-matplotlib
-python-decouple
 folium
+matplotlib
 streamlit-folium
 pip
