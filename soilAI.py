@@ -1,10 +1,10 @@
+import os
 if not os.path.exists("temp"):
     os.makedirs("temp")
 import streamlit as st
 import tensorflow as tf
 import numpy as np
 from PIL import Image
-import os
 import pdfkit
 from datetime import datetime
 import base64
