@@ -1,8 +1,7 @@
-streamlit
+streamlit>=1.31.0
 tensorflow
+pillow
 numpy
-Pillow
-folium
 matplotlib
+folium
 streamlit-folium
-pip
