@@ -1,11 +1,8 @@
 streamlit==1.33.0
 tensorflow==2.10.0
-numpy
-pillow
-opencv-python
-matplotlib
-scikit-learn
-folium
-geopy
-pdfkit
-python-dotenv
+numpy==1.23.5
+pillow==9.5.0
+opencv-python==4.8.1.78
+matplotlib==3.7.1
+folium==0.14.0
+geocoder==1.38.1
