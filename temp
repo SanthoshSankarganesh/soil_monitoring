@@ -1,4 +1,3 @@
 mkdir temp
 touch temp/.gitkeep
 git add temp/.gitkeep
-git commit -m "Add temp folder for PDF export"
